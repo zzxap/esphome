@@ -1,0 +1,47 @@
+esphome:
+  name: esp32c3-switch
+  friendly_name: ESP32-C3 Switch
+
+esp32:
+  board: esp32-c3-devkitm-1
+  framework:
+    type: arduino
+
+# 日志
+logger:
+
+# Home Assistant API
+api:
+  encryption:
+    key: "eDjck3Lryue4gUuAIOSv857rfUa1J4I999p5d40aGow="
+
+# OTA 更新
+ota:
+  - platform: esphome
+    password: ""
+
+# WiFi
+wifi:
+  ssid: "Sowye_HA"
+  password: "SOWye2016"
+  # 连不上 WiFi 时启动热点
+  ap:
+    ssid: "Elink-Switch"
+    password: "12345678"
+
+captive_portal:
+
+# MQTT
+mqtt:
+  broker: iot.iosbuy.com
+  port: 1883
+  username: admin
+  password: admin@123
+
+# 开关（GPIO9，根据实际接线修改）
+switch:
+  - platform: gpio
+    name: "Switch 1"
+    pin: GPIO9
+    id: switch1
+    restore_mode: RESTORE_DEFAULT_OFF

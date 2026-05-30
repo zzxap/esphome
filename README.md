@@ -5,7 +5,7 @@
     <source media="(prefers-color-scheme: dark)" srcset="https://media.esphome.io/logo/logo-text-on-dark.svg">
     <img src="https://media.esphome.io/logo/logo-text-on-light.svg" alt="ESPHome Logo">
   </picture>
-</a>
+</a>SOWye2016
 
 ---
 
