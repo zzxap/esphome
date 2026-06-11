@@ -14,6 +14,11 @@
 #   clean       清理编译产物
 #   erase       擦除 Flash
 #
+# 单芯片形式: ./build_esp32c3.sh <芯片> <命令>
+#   ./build_esp32c3.sh c3 build      编译 build_all/esphome_c3.yaml
+#   ./build_esp32c3.sh s3 flash      烧录 ESP32-S3
+#   ./build_esp32c3.sh c6 run        编译 + 烧录 + 监控 ESP32-C6
+#
 # buildall 芯片:
 #   8266      ESP8266
 #   32        ESP32
@@ -33,6 +38,28 @@ CONFIG="${CONFIG:-esp32c3.yaml}"
 UPLOAD_BAUD="${UPLOAD_BAUD:-460800}"
 BUILD_ALL_DIR="build_all"
 ALL_CHIPS=(8266 32 solo1 s2 s2cdc s3 c2 c3 c5 c6 p4)
+ESPTOOL_CHIP="esp32c3"
+CHIP_KEY=""
+
+is_chip() {
+    local c
+    for c in "${ALL_CHIPS[@]}"; do
+        [ "$c" = "$1" ] && return 0
+    done
+    return 1
+}
+
+# 选择芯片: CONFIG 指向 build_all/esphome_<芯片>.yaml，并设置 esptool 芯片名
+set_chip() {
+    CHIP_KEY="$1"
+    CONFIG="$BUILD_ALL_DIR/esphome_${CHIP_KEY}.yaml"
+    case "$CHIP_KEY" in
+        8266)      ESPTOOL_CHIP="esp8266" ;;
+        32|solo1)  ESPTOOL_CHIP="esp32" ;;
+        s2|s2cdc)  ESPTOOL_CHIP="esp32s2" ;;
+        *)         ESPTOOL_CHIP="esp32${CHIP_KEY}" ;;
+    esac
+}
 
 # 颜色输出
 RED='\033[0;31m'
@@ -145,7 +172,9 @@ detect_serial_port() {
 }
 
 usage() {
-    echo "用法: $0 [命令]"
+    echo "用法: $0 [命令]              默认配置 (CONFIG=${CONFIG})"
+    echo "      $0 <芯片> <命令>       使用 ${BUILD_ALL_DIR}/esphome_<芯片>.yaml"
+    echo "      $0 buildall [芯片...]  编译全部/指定芯片"
     echo ""
     echo "命令:"
     echo "  build       编译固件"
@@ -158,6 +187,12 @@ usage() {
     echo "  erase       擦除 Flash"
     echo "  clean       清理编译产物"
     echo ""
+    echo "示例:"
+    echo "  $0 build                  编译默认配置 esp32c3.yaml"
+    echo "  $0 c3 build               编译 ${BUILD_ALL_DIR}/esphome_c3.yaml"
+    echo "  $0 s3 flash               烧录 ESP32-S3"
+    echo "  $0 buildall c3 s3         批量编译指定芯片"
+    echo ""
     echo "环境变量:"
     echo "  CONFIG       配置文件 (默认 esp32c3.yaml)"
     echo "  SERIAL_PORT  串口设备 (默认自动检测)"
@@ -169,6 +204,22 @@ do_build() {
     echo -e "${GREEN}开始编译 ${CONFIG}...${NC}"
     run_esphome compile "$CONFIG"
     echo -e "${GREEN}编译完成！${NC}"
+    [ -n "$CHIP_KEY" ] && collect_firmware "$CHIP_KEY"
+    return 0
+}
+
+# 收集固件到 build_all/firmware/（优先 factory 整片镜像）
+collect_firmware() {
+    local chip="$1"
+    local build_dir="$BUILD_ALL_DIR/.esphome/build/elink-${chip}"
+    local bin
+    bin=$(find "$build_dir" -name 'firmware.factory.bin' 2>/dev/null | head -1)
+    [ -z "$bin" ] && bin=$(find "$build_dir" -name 'firmware.bin' 2>/dev/null | head -1)
+    if [ -n "$bin" ]; then
+        mkdir -p "$BUILD_ALL_DIR/firmware"
+        cp "$bin" "$BUILD_ALL_DIR/firmware/esphome_${chip}.bin"
+        echo -e "${CYAN}固件: ${BUILD_ALL_DIR}/firmware/esphome_${chip}.bin${NC}"
+    fi
 }
 
 do_buildall() {
@@ -187,15 +238,7 @@ do_buildall() {
         echo -e "${GREEN}========== 编译 ${chip} (${cfg}) ==========${NC}"
         if run_esphome compile "$cfg"; then
             ok+=("$chip")
-            # 收集固件到 build_all/firmware/（优先 factory 整片镜像）
-            local build_dir="$BUILD_ALL_DIR/.esphome/build/elink-${chip}"
-            local bin
-            bin=$(find "$build_dir" -name 'firmware.factory.bin' 2>/dev/null | head -1)
-            [ -z "$bin" ] && bin=$(find "$build_dir" -name 'firmware.bin' 2>/dev/null | head -1)
-            if [ -n "$bin" ]; then
-                cp "$bin" "$BUILD_ALL_DIR/firmware/esphome_${chip}.bin"
-                echo -e "${CYAN}固件: ${BUILD_ALL_DIR}/firmware/esphome_${chip}.bin${NC}"
-            fi
+            collect_firmware "$chip"
         else
             fail+=("$chip")
         fi
@@ -237,7 +280,7 @@ do_erase() {
     SERIAL_PORT="${SERIAL_PORT:-$(detect_serial_port)}"
     echo -e "${YELLOW}擦除 Flash...${NC}"
     echo -e "${CYAN}串口: ${SERIAL_PORT}${NC}"
-    run_esptool --chip esp32c3 --port "$SERIAL_PORT" --baud "$UPLOAD_BAUD" erase-flash
+    run_esptool --chip "$ESPTOOL_CHIP" --port "$SERIAL_PORT" --baud "$UPLOAD_BAUD" erase-flash
     echo -e "${GREEN}擦除完成！${NC}"
 }
 
@@ -247,6 +290,12 @@ do_clean() {
     run_esphome clean "$CONFIG"
     echo -e "${GREEN}清理完成！${NC}"
 }
+
+# 支持 "<芯片> <命令>" 形式: ./build_esp32c3.sh c3 build
+if is_chip "${1}"; then
+    set_chip "${1}"
+    shift
+fi
 
 case "${1}" in
     build)      do_build ;;
