@@ -1,0 +1,14 @@
+# ESP32 Solo1 经典单核版（单核 board + FreeRTOS 单核模式）
+substitutions:
+  chip: solo1
+
+packages:
+  base: !include common.yaml
+  network: !include network.yaml
+
+esp32:
+  board: esp32-solo1
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      CONFIG_FREERTOS_UNICORE: "y"

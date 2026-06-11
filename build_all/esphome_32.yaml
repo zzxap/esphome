@@ -1,0 +1,12 @@
+# ESP32 双核经典（variant: esp32）
+substitutions:
+  chip: "32"
+
+packages:
+  base: !include common.yaml
+  network: !include network.yaml
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf

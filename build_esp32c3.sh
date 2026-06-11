@@ -6,17 +6,33 @@
 #
 # 命令:
 #   build       编译固件
+#   buildall    编译 build_all/ 下所有芯片固件 (可指定芯片: buildall c3 s3)
 #   flash       烧录固件
 #   buildflash  编译并烧录
 #   run         编译 + 烧录 + 监控 (esphome run)
 #   logs        查看串口日志
 #   clean       清理编译产物
 #   erase       擦除 Flash
+#
+# buildall 芯片:
+#   8266      ESP8266
+#   32        ESP32
+#   solo1     ESP32 Solo1 (单核)
+#   s2        ESP32-S2
+#   s2cdc     ESP32-S2 (USB CDC)
+#   s3        ESP32-S3
+#   c2        ESP32-C2
+#   c3        ESP32-C3
+#   c5        ESP32-C5
+#   c6        ESP32-C6
+#   p4        ESP32-P4 (无内置无线)
 
 set -e
 
 CONFIG="${CONFIG:-esp32c3.yaml}"
 UPLOAD_BAUD="${UPLOAD_BAUD:-460800}"
+BUILD_ALL_DIR="build_all"
+ALL_CHIPS=(8266 32 solo1 s2 s2cdc s3 c2 c3 c5 c6 p4)
 
 # 颜色输出
 RED='\033[0;31m'
@@ -133,6 +149,8 @@ usage() {
     echo ""
     echo "命令:"
     echo "  build       编译固件"
+    echo "  buildall    编译所有芯片固件 (可指定: buildall c3 s3)"
+    echo "              芯片: ${ALL_CHIPS[*]}"
     echo "  flash       烧录固件"
     echo "  buildflash  编译并烧录"
     echo "  run         编译 + 烧录 + 监控"
@@ -151,6 +169,44 @@ do_build() {
     echo -e "${GREEN}开始编译 ${CONFIG}...${NC}"
     run_esphome compile "$CONFIG"
     echo -e "${GREEN}编译完成！${NC}"
+}
+
+do_buildall() {
+    local chips=("$@")
+    [ ${#chips[@]} -eq 0 ] && chips=("${ALL_CHIPS[@]}")
+    local ok=() fail=()
+    mkdir -p "$BUILD_ALL_DIR/firmware"
+    for chip in "${chips[@]}"; do
+        local cfg="$BUILD_ALL_DIR/esphome_${chip}.yaml"
+        if [ ! -f "$cfg" ]; then
+            echo -e "${RED}跳过 ${chip}: 配置不存在 ${cfg}${NC}"
+            fail+=("${chip}(无配置)")
+            continue
+        fi
+        echo ""
+        echo -e "${GREEN}========== 编译 ${chip} (${cfg}) ==========${NC}"
+        if run_esphome compile "$cfg"; then
+            ok+=("$chip")
+            # 收集固件到 build_all/firmware/（优先 factory 整片镜像）
+            local build_dir="$BUILD_ALL_DIR/.esphome/build/elink-${chip}"
+            local bin
+            bin=$(find "$build_dir" -name 'firmware.factory.bin' 2>/dev/null | head -1)
+            [ -z "$bin" ] && bin=$(find "$build_dir" -name 'firmware.bin' 2>/dev/null | head -1)
+            if [ -n "$bin" ]; then
+                cp "$bin" "$BUILD_ALL_DIR/firmware/esphome_${chip}.bin"
+                echo -e "${CYAN}固件: ${BUILD_ALL_DIR}/firmware/esphome_${chip}.bin${NC}"
+            fi
+        else
+            fail+=("$chip")
+        fi
+    done
+    echo ""
+    echo -e "${GREEN}========== buildall 汇总 ==========${NC}"
+    echo -e "${GREEN}成功 (${#ok[@]}): ${ok[*]:-无}${NC}"
+    if [ ${#fail[@]} -gt 0 ]; then
+        echo -e "${RED}失败 (${#fail[@]}): ${fail[*]}${NC}"
+        return 1
+    fi
 }
 
 do_flash() {
@@ -194,6 +250,7 @@ do_clean() {
 
 case "${1}" in
     build)      do_build ;;
+    buildall)   shift; do_buildall "$@" ;;
     flash)      do_flash ;;
     buildflash) do_build && do_flash ;;
     run)        do_run ;;

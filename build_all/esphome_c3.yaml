@@ -1,0 +1,13 @@
+# ESP32-C3 主流性价比 RISC-V（variant: esp32c3）
+substitutions:
+  chip: c3
+  switch_pin: GPIO9
+
+packages:
+  base: !include common.yaml
+  network: !include network.yaml
+
+esp32:
+  board: esp32-c3-devkitm-1
+  framework:
+    type: esp-idf

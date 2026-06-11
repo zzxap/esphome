@@ -1,0 +1,12 @@
+# ESP32-C2 极低成本 RISC-V（variant: esp32c2，仅支持 ESP-IDF）
+substitutions:
+  chip: c2
+
+packages:
+  base: !include common.yaml
+  network: !include network.yaml
+
+esp32:
+  board: esp32-c2-devkitm-1
+  framework:
+    type: esp-idf

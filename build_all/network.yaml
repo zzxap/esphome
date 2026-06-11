@@ -1,0 +1,25 @@
+# 联网相关配置（P4 无内置无线，不引入此文件）
+
+# Home Assistant API
+api:
+  encryption:
+    key: "eDjck3Lryue4gUuAIOSv857rfUa1J4I999p5d40aGow="
+
+# OTA 更新
+ota:
+  - platform: esphome
+    password: ""
+
+# WiFi：不预置网络，上电直接开热点，连接后自动弹出配网页面
+wifi:
+  ap:
+    ssid: Elink-${chip}
+
+captive_portal:
+
+# MQTT
+mqtt:
+  broker: iot.iosbuy.com
+  port: 1883
+  username: admin
+  password: admin@123

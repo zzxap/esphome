@@ -1,0 +1,20 @@
+# 通用基础配置（所有芯片共用）
+# 由 build_all/esphome_<chip>.yaml 通过 packages 引入
+substitutions:
+  # 默认开关引脚，芯片配置文件可覆盖
+  switch_pin: GPIO4
+
+esphome:
+  name: elink-${chip}
+  friendly_name: Elink ${chip}
+
+# 日志
+logger:
+
+# 开关（引脚由 substitutions 控制）
+switch:
+  - platform: gpio
+    name: "Switch 1"
+    pin: ${switch_pin}
+    id: switch1
+    restore_mode: RESTORE_DEFAULT_OFF

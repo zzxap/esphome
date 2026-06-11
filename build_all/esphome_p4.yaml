@@ -1,0 +1,13 @@
+# ESP32-P4 高性能计算/多媒体（variant: esp32p4）
+# 无内置无线，不引入 network.yaml（WiFi/MQTT/API/OTA 均依赖网络）
+# 如需联网可外接 ESP32-C6 并配置 esp32_hosted 组件
+substitutions:
+  chip: p4
+
+packages:
+  base: !include common.yaml
+
+esp32:
+  board: esp32-p4-evboard
+  framework:
+    type: esp-idf

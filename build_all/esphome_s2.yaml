@@ -1,0 +1,12 @@
+# ESP32-S2 单核带 USB（variant: esp32s2）
+substitutions:
+  chip: s2
+
+packages:
+  base: !include common.yaml
+  network: !include network.yaml
+
+esp32:
+  board: esp32-s2-saola-1
+  framework:
+    type: esp-idf

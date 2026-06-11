@@ -1,0 +1,12 @@
+# ESP32-C5 双频 WiFi 6（variant: esp32c5，需 ESP-IDF >= 5.5）
+substitutions:
+  chip: c5
+
+packages:
+  base: !include common.yaml
+  network: !include network.yaml
+
+esp32:
+  board: esp32-c5-devkitc-1
+  framework:
+    type: esp-idf

@@ -1,0 +1,16 @@
+# ESP32-S2 (USB CDC) 日志走 USB 虚拟串口
+substitutions:
+  chip: s2cdc
+
+packages:
+  base: !include common.yaml
+  network: !include network.yaml
+
+esp32:
+  board: esp32-s2-saola-1
+  framework:
+    type: esp-idf
+
+# 日志输出改为 USB CDC 虚拟串口
+logger:
+  hardware_uart: USB_CDC

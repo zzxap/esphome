@@ -1,0 +1,12 @@
+# ESP32-S3 双核高性能（variant: esp32s3）
+substitutions:
+  chip: s3
+
+packages:
+  base: !include common.yaml
+  network: !include network.yaml
+
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: esp-idf
