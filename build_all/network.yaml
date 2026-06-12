@@ -18,8 +18,64 @@ wifi:
 captive_portal:
 
 # MQTT
+# discovery 默认开启，设备会向 homeassistant/<comp>/elink-${chip}/<obj>/config
+# 发布 retained 发现消息，HA 的 MQTT 集成里直接出现设备，无需改 HA 配置。
+# 这里显式写出，防止以后误关；topic_prefix 同理显式固定为 elink-${chip}。
 mqtt:
   broker: iot.iosbuy.com
   port: 1883
   username: admin
   password: admin@123
+  topic_prefix: elink-${chip}
+  discovery: true
+  discovery_prefix: homeassistant
+  discovery_retain: true
+
+# 固定各实体 Topic（与 smart_home 后端 / esphome/.doc_for_ai/mqtt_cmd.md 约定一致）。
+# 默认主题由实体 name 推导（"Switch 1"→switch_1），显式覆盖后即使日后改名、
+# 主题也不会漂移；HA 发现消息会自动携带这些自定义主题，HA 控制不受影响。
+# switch1 / countdown 定义在 common.yaml，用 !extend 按 id 追加 MQTT 选项
+# （不能直接写进 common.yaml：P4 无网络无 mqtt，带 MQTT 选项会编译失败）。
+switch:
+  - id: !extend switch1
+    state_topic: elink-${chip}/switch/switch_1/state
+    command_topic: elink-${chip}/switch/switch_1/command
+
+number:
+  - id: !extend countdown
+    state_topic: elink-${chip}/number/countdown/state
+    command_topic: elink-${chip}/number/countdown/command
+
+# 网络时间（定时功能依赖，所以放 network.yaml 而不是 common.yaml）
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: Asia/Shanghai
+
+# 定时开/关：每天到设定时刻执行，时间可由 MQTT / HA 修改并断电保存
+# MQTT: elink-<chip>/datetime/timer_on|timer_off/command
+datetime:
+  - platform: template
+    type: time
+    name: "Timer On"
+    id: timer_on
+    optimistic: true
+    initial_value: "07:00:00"
+    restore_value: true
+    time_id: sntp_time
+    state_topic: elink-${chip}/datetime/timer_on/state
+    command_topic: elink-${chip}/datetime/timer_on/command
+    on_time:
+      - switch.turn_on: switch1
+  - platform: template
+    type: time
+    name: "Timer Off"
+    id: timer_off
+    optimistic: true
+    initial_value: "23:00:00"
+    restore_value: true
+    time_id: sntp_time
+    state_topic: elink-${chip}/datetime/timer_off/state
+    command_topic: elink-${chip}/datetime/timer_off/command
+    on_time:
+      - switch.turn_off: switch1

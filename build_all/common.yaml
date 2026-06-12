@@ -18,3 +18,33 @@ switch:
     pin: ${switch_pin}
     id: switch1
     restore_mode: RESTORE_DEFAULT_OFF
+
+# 倒计时（秒）：设为 N 后每秒递减，减到 0 时关闭开关；设为 0 取消倒计时
+# MQTT: elink-<chip>/number/countdown/command 发数字（如 60），state 主题回报剩余秒数
+number:
+  - platform: template
+    name: "Countdown"
+    id: countdown
+    icon: mdi:timer-outline
+    unit_of_measurement: s
+    mode: box
+    min_value: 0
+    max_value: 86400
+    step: 1
+    initial_value: 0
+    optimistic: true
+
+# 倒计时引擎：每秒递减一次，从 1 减到 0 时关闭开关（直接发 0 只取消，不动开关）
+interval:
+  - interval: 1s
+    then:
+      - lambda: |-
+          if (id(countdown).state > 0) {
+            float v = id(countdown).state - 1;
+            auto call = id(countdown).make_call();
+            call.set_value(v);
+            call.perform();
+            if (v <= 0) {
+              id(switch1).turn_off();
+            }
+          }
