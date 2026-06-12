@@ -34,6 +34,7 @@ Icon
 # Distribution / packaging
 .Python
 build/
+build_all/
 develop-eggs/
 dist/
 downloads/
