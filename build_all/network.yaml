@@ -17,6 +17,13 @@ wifi:
 
 captive_portal:
 
+# 设备自带 Web 控制界面：联网后浏览器访问设备 IP（http://<设备IP>）即可查看
+# 并控制所有实体（开关/定时等）。纯本地，不依赖云或 HA。captive_portal 只在
+# 配网 AP 模式下占用 80 端口，正常联网后由 web_server 提供服务，二者不冲突。
+web_server:
+  version: 3
+  port: 80
+
 # MQTT
 # discovery 默认开启，设备会向 homeassistant/<comp>/elink-${chip}/<obj>/config
 # 发布 retained 发现消息，HA 的 MQTT 集成里直接出现设备，无需改 HA 配置。

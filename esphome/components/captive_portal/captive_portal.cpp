@@ -53,6 +53,20 @@ void CaptivePortal::handle_wifisave(AsyncWebServerRequest *request) {
            "  SSID='%s'\n"
            "  Password=" LOG_SECRET("'%s'"),
            ssid.c_str(), psk.c_str());
+  // Diagnostic: dump the exact decoded lengths and raw bytes so special
+  // characters (e.g. '@' == 0x40) can be verified against the real password.
+  // Compare psk_len below with the actual number of characters you typed.
+  ESP_LOGD(TAG, "Decoded lengths: ssid_len=%u psk_len=%u", (unsigned) ssid.length(), (unsigned) psk.length());
+  {
+    std::string hex;
+    hex.reserve(psk.length() * 3);
+    char b[4];
+    for (unsigned char c : psk) {
+      snprintf(b, sizeof(b), "%02X ", c);
+      hex += b;
+    }
+    ESP_LOGD(TAG, "Password bytes (hex): %s", hex.c_str());
+  }
 #ifdef USE_ESP8266
   // ESP8266 is single-threaded, call directly
   wifi::global_wifi_component->save_wifi_sta(ssid.c_str(), psk.c_str());
@@ -60,7 +74,19 @@ void CaptivePortal::handle_wifisave(AsyncWebServerRequest *request) {
   // Defer save to main loop thread to avoid NVS operations from HTTP thread
   this->defer([ssid, psk]() { wifi::global_wifi_component->save_wifi_sta(ssid.c_str(), psk.c_str()); });
 #endif
-  request->send(200, ESPHOME_F("text/plain"), ESPHOME_F("Saved. Connecting..."));
+  // Return an HTML page instead of plain text so the browser auto-returns to the
+  // provisioning page after 30s if the connection does not succeed. On success the
+  // AP disappears and the refresh simply fails harmlessly.
+  request->send(200, ESPHOME_F("text/html"),
+                ESPHOME_F("<!DOCTYPE html><html><head><meta charset=\"utf-8\">"
+                          "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+                          "<meta http-equiv=\"refresh\" content=\"30;url=/\">"
+                          "<title>Connecting...</title></head>"
+                          "<body style=\"font-family:sans-serif;text-align:center;padding-top:40px\">"
+                          "<h3>Saved. Connecting...</h3>"
+                          "<p>If not connected within 30s, you will be returned to the setup page.</p>"
+                          "<p><a href=\"/\">Return now</a></p>"
+                          "</body></html>"));
 }
 
 void CaptivePortal::setup() {
